@@ -1,0 +1,44 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Backup {
+  id        String   @id @default(uuid())
+  date      DateTime
+  dbName    String
+  size      String
+  status    String   // "success" | "failed" | "in_progress"
+  filePath  String
+  duration  Int?     // seconds
+  cloudSync Boolean  @default(false)
+  errorMsg  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
+  @@index([status])
+}
+
+model Setting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model StorageSnapshot {
+  id        String   @id @default(uuid())
+  totalGB   Float
+  usedGB    Float
+  freeGB    Float
+  backupGB  Float
+  date      DateTime @default(now())
+
+  @@index([date])
+}
