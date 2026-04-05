@@ -89,6 +89,7 @@ export class BackupService {
   /**
    * Trigger a manual backup
    * - Uses dynamic settings for MONGO_DB_NAME, RCLONE_REMOTE, etc.
+   * - Dynamically generates rclone.conf for cloud sync
    */
   async triggerBackup(): Promise<{ message: string; backupId: string }> {
     const settings = await settingsService.getAll();
@@ -110,19 +111,48 @@ export class BackupService {
     const scriptPath = config.backupScriptPath;
     const isWindows = process.platform === "win32";
 
+    // --- Dynamic Rclone Configuration ---
+    let rcloneConfigPath = "";
+    const remoteName = settings.rclone_remote || "nextcloud";
+    
+    if (!isWindows && settings.rclone_host && settings.rclone_user && settings.rclone_pass) {
+      try {
+        // Generate dynamic rclone.conf content
+        const rcloneConfContent = `
+[${remoteName}]
+type = webdav
+url = ${settings.rclone_host}
+vendor = nextcloud
+user = ${settings.rclone_user}
+pass = ${settings.rclone_pass}
+`.trim();
+
+        // Save to temporary file
+        rcloneConfigPath = "/tmp/rclone.conf";
+        fs.writeFileSync(rcloneConfigPath, rcloneConfContent);
+        logger.info(`✅ Dynamic rclone configuration generated at ${rcloneConfigPath}`);
+      } catch (err) {
+        logger.error(`❌ Failed to generate dynamic rclone config: ${err}`);
+      }
+    }
+
     // Prepare environment variables from dynamic settings
     const dynamicEnv = {
       ...process.env,
       MONGO_DB_NAME: dbName,
-      RCLONE_REMOTE: settings.rclone_remote || "",
+      RCLONE_REMOTE: remoteName,
       RCLONE_PATH: settings.rclone_path || "backups/",
       RETENTION_DAYS: settings.retention_days || "7",
-      // These are already in .env or config, but we pass them explicitly too
       API_URL: process.env.API_URL || `http://localhost:${config.port}`,
       API_KEY: config.apiKey,
       BACKUP_DIR: config.backupDir,
       MONGO_URI: process.env.MONGO_URI || "mongodb://localhost:27017"
     };
+
+    // If we have a dynamic config, pass it to rclone via environment variable
+    if (rcloneConfigPath) {
+      (dynamicEnv as any).RCLONE_CONFIG = rcloneConfigPath;
+    }
 
     if (!isWindows && fs.existsSync(scriptPath)) {
       this.runBashBackup(backup.id, scriptPath, dynamicEnv);
@@ -222,7 +252,7 @@ export class BackupService {
           size: sizeStr,
           filePath: dumpDir,
           duration,
-          cloudSync: false, // Cloud sync not implemented for direct Windows path yet
+          cloudSync: false,
         },
       });
 
@@ -315,7 +345,7 @@ export class BackupService {
         env: { 
           ...process.env, 
           SKIP_CONFIRM: "true",
-          MONGO_DB_NAME: settings.mongo_db || "" // Use latest DB name for restore
+          MONGO_DB_NAME: settings.mongo_db || "" 
         },
       }).unref();
     } else {

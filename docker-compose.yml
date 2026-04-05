@@ -9,7 +9,6 @@ services:
     volumes:
       - ./backups:/backups
       - ./server/prisma:/app/server/prisma
-      - ./server/src/config/rclone.conf:/root/.config/rclone/rclone.conf:ro
     env_file:
       - .env
     environment:

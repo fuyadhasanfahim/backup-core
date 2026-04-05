@@ -13,12 +13,19 @@ export class SettingsService {
     retention_days: process.env.RETENTION_DAYS || "7",
     cron_schedule: "0 2 * * *",
     mongo_db: config.mongoDbName || "",
-    rclone_remote: config.rcloneRemote || "",
+    
+    // Cloud Storage (Nextcloud / rclone)
+    rclone_remote: config.rcloneRemote || "nextcloud",
     rclone_path: config.rclonePath || "backups/",
+    rclone_host: "", // e.g. https://nextcloud.example.com/remote.php/dav/files/user/
+    rclone_user: "",
+    rclone_pass: "", // App password
+    
+    // SMTP Notifications
     smtp_host: config.smtpHost || "",
     smtp_port: String(config.smtpPort || 587),
     smtp_user: config.smtpUser || "",
-    smtp_pass: config.smtpHost ? config.smtpPass : "", // Only use pass if host is set
+    smtp_pass: config.smtpHost ? config.smtpPass : "", 
     from_email: config.fromEmail || "backups@backendsafe.com",
     admin_email: config.adminEmail || "",
   };
@@ -38,7 +45,7 @@ export class SettingsService {
       return merged;
     } catch (error) {
       logger.error("Error fetching settings from DB:", error);
-      return this.DEFAULTS; // Fallback to defaults
+      return this.DEFAULTS; 
     }
   }
 

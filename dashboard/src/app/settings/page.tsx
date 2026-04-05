@@ -10,7 +10,6 @@ import {
   EyeOff,
   Loader2,
   CheckCircle2,
-  Shield,
   AlertTriangle,
   RefreshCw,
 } from "lucide-react";
@@ -86,7 +85,6 @@ export default function SettingsPage() {
     setSaving(true);
     setError(null);
     try {
-      // Only send changed values
       const changedEntries: Record<string, string> = {};
       for (const key of Object.keys(dirty)) {
         if (dirty[key]) {
@@ -127,7 +125,7 @@ export default function SettingsPage() {
           label: "Cron Schedule",
           key: "cron_schedule",
           type: "text",
-          description: "Cron expression for scheduled backups (e.g. 0 2 * * * = daily at 2AM)",
+          description: "Cron expression for scheduled backups",
           readOnly: true,
         },
         {
@@ -140,22 +138,43 @@ export default function SettingsPage() {
       ],
     },
     {
-      title: "Cloud Storage",
+      title: "Nextcloud Cloud Storage",
       icon: <Cloud className="w-5 h-5 text-info" />,
       fields: [
         {
-          label: "Nextcloud Remote",
-          key: "rclone_remote",
+          label: "Nextcloud Host URL",
+          key: "rclone_host",
           type: "text",
-          description: "rclone remote name (e.g. nextcloud)",
-          placeholder: "nextcloud",
+          placeholder: "https://nextcloud.example.com/remote.php/dav/files/user/",
+          description: "WebDAV URL for your Nextcloud storage",
         },
         {
-          label: "Remote Path",
+          label: "Nextcloud Username",
+          key: "rclone_user",
+          type: "text",
+          placeholder: "admin",
+          description: "Nextcloud login username",
+        },
+        {
+          label: "Nextcloud App Password",
+          key: "rclone_pass",
+          type: "password",
+          masked: true,
+          placeholder: "xxxx-xxxx-xxxx-xxxx",
+          description: "Use an App Password for better security",
+        },
+        {
+          label: "Destination Path",
           key: "rclone_path",
           type: "text",
-          description: "Destination path on Nextcloud",
           placeholder: "backups/",
+          description: "Path on Nextcloud where backups will be saved",
+        },
+        {
+          label: "Remote Identifier",
+          key: "rclone_remote",
+          type: "text",
+          description: "Internal identifier for rclone (default: nextcloud)",
         },
       ],
     },
@@ -174,21 +193,21 @@ export default function SettingsPage() {
           label: "SMTP Port",
           key: "smtp_port",
           type: "number",
-          description: "SMTP port (587 for TLS, 465 for SSL)",
+          description: "SMTP port (587/465)",
         },
         {
           label: "SMTP User",
           key: "smtp_user",
           type: "text",
           placeholder: "user@gmail.com",
-          description: "SMTP authentication username",
+          description: "SMTP username",
         },
         {
           label: "SMTP Password",
           key: "smtp_pass",
           type: "password",
           masked: true,
-          placeholder: "App password or SMTP password",
+          placeholder: "App password",
           description: "SMTP authentication password",
         },
         {
@@ -196,24 +215,21 @@ export default function SettingsPage() {
           key: "from_email",
           type: "text",
           placeholder: "backups@backendsafe.com",
-          description: "Sender email address for alerts",
         },
         {
           label: "Admin Recipient",
           key: "admin_email",
           type: "text",
           placeholder: "admin@example.com",
-          description: "Admin email for failure notifications",
+          description: "Receive failure alerts here",
         },
       ],
     },
   ];
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto animate-fade-in">
-      <div className="aurora-bg opacity-5 -top-40 -right-40 scale-150" />
-
-      {/* Premium Page Header */}
+    <div className="space-y-8 max-w-7xl mx-auto animate-fade-in relative z-10">
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-white/5 pb-8">
         <div className="space-y-2">
           <div className="flex items-center gap-2 mb-1">
@@ -224,7 +240,7 @@ export default function SettingsPage() {
             System Settings
           </h1>
           <p className="text-sm text-muted font-medium">
-            Fine-tune your backup architecture, Nextcloud sync, and notification engine
+            Fine-tune your backup architecture, cloud sync, and notification engine
           </p>
         </div>
 
@@ -269,7 +285,6 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Error banner */}
       {error && (
         <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-danger/10 border border-danger/20 text-sm text-danger font-medium animate-fade-in">
           <AlertTriangle className="w-5 h-5 shrink-0" />
@@ -277,15 +292,10 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* Loading state */}
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {[...Array(3)].map((_, i) => (
-            <div
-              key={i}
-              className="card-premium h-full animate-fade-in"
-              style={{ animationDelay: `${i * 100}ms` }}
-            >
+            <div key={i} className="card-premium h-full animate-fade-in" style={{ animationDelay: `${i * 100}ms` }}>
               <div className="space-y-6">
                 <div className="flex items-center gap-4 mb-8">
                   <div className="w-12 h-12 rounded-2xl bg-white/5 animate-pulse" />
@@ -307,7 +317,7 @@ export default function SettingsPage() {
             <div
               key={group.title}
               className={`card-premium h-full transition-all duration-500 overflow-hidden group animate-fade-in ${
-                group.title === "Email Notifications" ? "md:col-span-2" : ""
+                group.title !== "Backup Configuration" ? "md:col-span-2" : ""
               }`}
               style={{ animationDelay: `${gi * 100}ms` }}
             >
@@ -319,7 +329,7 @@ export default function SettingsPage() {
               </div>
 
               <div className={`${
-                group.title === "Email Notifications"
+                group.title !== "Backup Configuration"
                   ? "grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6"
                   : "space-y-6"
               }`}>
@@ -359,7 +369,7 @@ export default function SettingsPage() {
                             field.readOnly ? "opacity-40 cursor-not-allowed" : ""
                           } ${field.masked ? "pr-12" : ""} ${
                             isDirty
-                              ? "border-accent/40 bg-accent/[0.03]"
+                              ? "border-accent/40 bg-accent/3"
                               : "border-white/10"
                           }`}
                         />
