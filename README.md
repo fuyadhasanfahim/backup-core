@@ -1,45 +1,44 @@
-# 🚀 BackendSafe — MongoDB Backup System
+# 🚀 BackendSafe — Professional MongoDB Backup System
 
-A production-grade MongoDB backup system with a web dashboard for monitoring, control, and management.
+BackendSafe is an enterprise-grade automated backup solution for MongoDB, featuring a modern web dashboard for real-time monitoring and dynamic management.
 
-## Features
+## ✨ Core Features
 
-- 🔄 **Automated Backups** — Cron-based daily backups at 2AM
-- 📦 **Compression** — tar.gz compression for efficient storage
-- ☁️ **Cloud Sync** — Automatic Nextcloud upload via rclone
-- 🧹 **Auto Cleanup** — Configurable retention period
-- 📊 **Web Dashboard** — Real-time monitoring and control panel
-- 🔐 **Secure** — JWT auth, rate limiting, CORS, Helmet
-- 🔔 **Notifications** — Telegram alerts on failure
-- 🔄 **Restore** — One-click restore from any backup
+- 🔄 **Dynamic Management** — Change MongoDB connection strings, database names, and backup locations via the dashboard without any restart.
+- 📦 **Smart Compression** — Automated `tar.gz` compression to optimize disk space.
+- ☁️ **Cloud Sync** — Instant off-site replication to **Nextcloud** or any other **rclone**-compatible storage.
+- 🔔 **Instant Failure Alerts** — Get notified via **Email (SMTP)** immediately if a backup or sync operation fails.
+- 📊 **Disk Analytics** — Real-time tracking of disk usage and backup growth with high-fidelity analytics snapshots.
+- 🧹 **Retention Controls** — Configurable auto-cleanup for local backups to prevent storage overflow.
+- 🔄 **One-Click Restore** — Simple, reliable restoration process from any successful backup record.
 
-## Architecture
+---
 
-```
-dashboard (Next.js :3000)  →  API (Express :4000)  →  PostgreSQL
-                                    ↓
-                              backup.sh  →  MongoDB  →  Nextcloud
-```
+## 🛠️ Technology Stack
 
-## Quick Start
+| Layer | Technologies |
+|-------|--------------|
+| **Frontend** | [Next.js](https://nextjs.org/), [Tailwind CSS 4](https://tailwindcss.com/) |
+| **Backend** | [Node.js](https://nodejs.org/), [Express](https://expressjs.com/), [TypeScript](https://www.typescriptlang.org/) |
+| **Database** | [Prisma](https://www.prisma.io/) (Metadata), [SQLite](https://sqlite.org/) |
+| **Automation** | Bash Shell scripts, [node-cron](https://github.com/node-cron/node-cron), [rclone](https://rclone.org/) |
 
-### 1. Environment Setup
+---
 
+## 🚀 Installation & Setup
+
+### 1. Prerequisites
+- Node.js (v18+)
+- MongoDB (Target for backup)
+- Rclone (Optional, for Cloud sync)
+
+### 2. Environment Setup
 ```bash
 cp .env.example .env
-# Edit .env with your values
+# Edit .env with your initial variables
 ```
 
-### 2. Generate Password Hash
-
-```bash
-cd server
-node -e "const b=require('bcryptjs');console.log(b.hashSync('your-password',10))"
-# Copy the hash to ADMIN_PASSWORD_HASH in .env
-```
-
-### 3. Start Server
-
+### 3. Server Initialization
 ```bash
 cd server
 npm install
@@ -47,38 +46,28 @@ npx prisma db push
 npm run dev
 ```
 
-### 4. Start Dashboard
-
+### 4. Dashboard Setup
 ```bash
 cd dashboard
 npm install
 npm run dev
 ```
 
-### 5. Setup Cron (on VPS)
+---
 
-```bash
-chmod +x scripts/*.sh
-bash scripts/cron-setup.sh
-```
+## 📂 Project Structure
+- **/dashboard**: Next.js monitoring panel.
+- **/server**: Node.js API and backup execution logic.
+- **/scripts**: Core shell scripts for backup, restore, and cron setup.
+- **/backups**: Default destination for local backup archives.
 
-## API Endpoints
+---
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | /api/auth/login | ❌ | Login |
-| POST | /api/auth/logout | ✅ | Logout |
-| GET | /api/auth/me | ✅ | Current user |
-| GET | /api/backups | ✅ | List backups |
-| GET | /api/backups/stats | ✅ | Backup stats |
-| POST | /api/backups/trigger | ✅ | Trigger backup |
-| POST | /api/backups/log | 🔑 | Log result (script) |
-| DELETE | /api/backups/:id | ✅ | Delete backup |
-| POST | /api/backups/:id/restore | ✅ | Restore backup |
-| GET | /api/storage | ✅ | Disk usage |
-| GET | /api/storage/history | ✅ | Storage history |
+## 📜 Commands
+- Trigger Manual Backup: Via the Dashboard UI or `POST /api/backups/trigger`
+- Setup Cron: `bash scripts/cron-setup.sh`
 
-## License
+---
 
-MIT
-# backup-core
+## ❤️ Credits
+Developed as a robust solution for production MongoDB deployments.
