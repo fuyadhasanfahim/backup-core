@@ -46,12 +46,14 @@ log_to_api() {
   local error_msg="${4:-}"
   local file_path="${5:-}"
   local cloud_sync="${6:-false}"
+  local backup_id="${BACKUP_ID:-}"
 
   if [ -n "$API_KEY" ]; then
     curl -s -X POST "${API_URL}/api/backups/log" \
       -H "Content-Type: application/json" \
       -H "x-api-key: ${API_KEY}" \
       -d "{
+        \"id\": \"${backup_id}\",
         \"date\": \"${DATE_ISO}\",
         \"dbName\": \"${MONGO_DB_NAME:-all}\",
         \"size\": \"${size}\",
@@ -98,12 +100,16 @@ main() {
   # --- Step 1: mongodump ---
   log "📦 Running mongodump..."
   
-  DUMP_ARGS="--uri=\"${MONGO_URI}\" --out=\"${DUMP_DIR}\""
+  # Use array for arguments to handle special characters correctly without eval
+  DUMP_ARGS=("--uri=${MONGO_URI}" "--out=${DUMP_DIR}")
+  
   if [ -n "$MONGO_DB_NAME" ]; then
-    DUMP_ARGS="--uri=\"${MONGO_URI}\" --db=\"${MONGO_DB_NAME}\" --out=\"${DUMP_DIR}\""
+    DUMP_ARGS+=("--db=${MONGO_DB_NAME}")
   fi
 
-  if ! eval mongodump $DUMP_ARGS 2>&1; then
+  log "Executing: mongodump ${DUMP_ARGS[*]}"
+
+  if ! mongodump "${DUMP_ARGS[@]}" 2>&1; then
     local end_time
     end_time=$(date +%s)
     local duration=$((end_time - start_time))

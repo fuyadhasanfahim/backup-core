@@ -51,6 +51,7 @@ export class BackupService {
    * Log a backup result (called by backup.sh script)
    */
   async logBackup(data: {
+    id?: string;
     date: string;
     dbName: string;
     size: string;
@@ -60,18 +61,40 @@ export class BackupService {
     cloudSync?: boolean;
     errorMsg?: string;
   }) {
-    const backup = await prisma.backup.create({
-      data: {
-        date: new Date(data.date),
-        dbName: data.dbName,
-        size: data.size,
-        status: data.status,
-        filePath: data.filePath || "",
-        duration: data.duration || null,
-        cloudSync: data.cloudSync || false,
-        errorMsg: data.errorMsg || null,
-      },
-    });
+    let backup;
+
+    if (data.id) {
+      try {
+        backup = await prisma.backup.update({
+          where: { id: data.id },
+          data: {
+            size: data.size,
+            status: data.status,
+            filePath: data.filePath || "",
+            duration: data.duration || null,
+            cloudSync: data.cloudSync || false,
+            errorMsg: data.errorMsg || null,
+          },
+        });
+      } catch (err) {
+        logger.warn(`Could not update backup ${data.id}, creating new one instead.`);
+      }
+    }
+
+    if (!backup) {
+      backup = await prisma.backup.create({
+        data: {
+          date: new Date(data.date),
+          dbName: data.dbName,
+          size: data.size,
+          status: data.status,
+          filePath: data.filePath || "",
+          duration: data.duration || null,
+          cloudSync: data.cloudSync || false,
+          errorMsg: data.errorMsg || null,
+        },
+      });
+    }
 
     // Send email alert on failure
     if (data.status === "failed") {
@@ -139,12 +162,13 @@ pass = ${settings.rclone_pass}
     // Prepare environment variables from dynamic settings
     const dynamicEnv = {
       ...process.env,
-      MONGO_DB_NAME: dbName,
+      MONGO_DB_NAME: dbName === "all" ? "" : dbName,
       RCLONE_REMOTE: remoteName,
       RCLONE_PATH: settings.rclone_path || "backups/",
       RETENTION_DAYS: settings.retention_days || "7",
       API_URL: process.env.API_URL || `http://localhost:${config.port}`,
       API_KEY: config.apiKey,
+      BACKUP_ID: backup.id,
       BACKUP_DIR: config.backupDir,
       MONGO_URI: process.env.MONGO_URI || "mongodb://localhost:27017"
     };
@@ -186,8 +210,16 @@ pass = ${settings.rclone_pass}
   private runBashBackup(backupId: string, scriptPath: string, env: any) {
     const child = spawn("bash", [scriptPath], {
       detached: true,
-      stdio: "ignore",
+      stdio: "pipe", // Capture output
       env: env,
+    });
+
+    child.stdout?.on("data", (data) => {
+      logger.info(`[Backup Script]: ${data.toString().trim()}`);
+    });
+
+    child.stderr?.on("data", (data) => {
+      logger.error(`[Backup Script Error]: ${data.toString().trim()}`);
     });
 
     child.unref();
