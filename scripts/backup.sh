@@ -72,11 +72,11 @@ get_file_size() {
     local bytes
     bytes=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file" 2>/dev/null || echo "0")
     if [ "$bytes" -ge 1073741824 ]; then
-      echo "$(echo "scale=2; $bytes/1073741824" | bc) GB"
+      echo "$bytes" | awk '{printf "%.2f GB", $1/1073741824}'
     elif [ "$bytes" -ge 1048576 ]; then
-      echo "$(echo "scale=2; $bytes/1048576" | bc) MB"
+      echo "$bytes" | awk '{printf "%.2f MB", $1/1048576}'
     elif [ "$bytes" -ge 1024 ]; then
-      echo "$(echo "scale=2; $bytes/1024" | bc) KB"
+      echo "$bytes" | awk '{printf "%.2f KB", $1/1024}'
     else
       echo "${bytes} B"
     fi

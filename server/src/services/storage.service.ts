@@ -83,15 +83,24 @@ export class StorageService {
    * Linux-specific storage info using df/du
    */
   private async getLinuxStorageInfo() {
-    // Get root filesystem info
-    const { stdout: dfOutput } = await execAsync("df -BG / | tail -1");
+    // Get root filesystem info with specific columns in bytes
+    const { stdout: dfOutput } = await execAsync("df -B1 / --output=size,used,avail,pcent | tail -n 1");
+    
+    // Split by whitespace and extract values
     const parts = dfOutput.trim().split(/\s+/);
+    const size = parts[0];
+    const used = parts[1];
+    const avail = parts[2];
+    const pcent = parts[3];
 
-    // parts: [filesystem, size, used, avail, use%, mountpoint]
-    const totalGB = parseFloat(parts[1]?.replace("G", "") || "0");
-    const usedGB = parseFloat(parts[2]?.replace("G", "") || "0");
-    const freeGB = parseFloat(parts[3]?.replace("G", "") || "0");
-    const usePercent = parseInt(parts[4]?.replace("%", "") || "0", 10);
+    const totalBytes = parseFloat(size || "0");
+    const usedBytes = parseFloat(used || "0");
+    const freeBytes = parseFloat(avail || "0");
+    const usePercent = parseInt(pcent?.replace("%", "") || "0", 10);
+
+    const totalGB = totalBytes / 1073741824;
+    const usedGB = usedBytes / 1073741824;
+    const freeGB = freeBytes / 1073741824;
 
     // Get backup directory size
     let backupGB = 0;
@@ -99,20 +108,20 @@ export class StorageService {
       const { stdout: duOutput } = await execAsync(
         `du -sB1 ${config.backupDir} 2>/dev/null | cut -f1`
       );
-      backupGB = parseFloat(duOutput.trim()) / 1073741824; // bytes to GB
+      backupGB = parseFloat(duOutput.trim() || "0") / 1073741824; // bytes to GB
     } catch {
       logger.warn("Could not get backup directory size");
     }
 
     return {
-      total: `${totalGB} GB`,
-      used: `${usedGB} GB`,
-      free: `${freeGB} GB`,
+      total: `${totalGB.toFixed(1)} GB`,
+      used: `${usedGB.toFixed(1)} GB`,
+      free: `${freeGB.toFixed(1)} GB`,
       usePercent,
-      backupSize: `${backupGB.toFixed(2)} GB`,
-      totalGB,
-      usedGB,
-      freeGB,
+      backupSize: backupGB >= 1 ? `${backupGB.toFixed(2)} GB` : `${(backupGB * 1024).toFixed(2)} MB`,
+      totalGB: Math.round(totalGB),
+      usedGB: Math.round(usedGB),
+      freeGB: Math.round(freeGB),
       backupGB,
     };
   }

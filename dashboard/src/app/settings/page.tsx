@@ -228,7 +228,7 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto animate-fade-in relative z-10">
+    <div className="space-y-6 p-4 max-w-7xl mx-auto animate-fade-in relative z-10">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-white/5 pb-8">
         <div className="space-y-2">

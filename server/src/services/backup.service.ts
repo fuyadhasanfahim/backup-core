@@ -7,6 +7,7 @@ import { config } from "../config/env";
 import { settingsService } from "./settings.service";
 import logger from "../utils/logger";
 import { emailService } from "./email.service";
+import { storageService } from "./storage.service";
 
 const execAsync = promisify(exec);
 const prisma = new PrismaClient();
@@ -106,6 +107,13 @@ export class BackupService {
       });
     }
 
+    // Trigger storage snapshot on successful backup completion (for dashboard charts)
+    if (data.status === "success") {
+      storageService.saveSnapshot().catch(err => {
+        logger.error(`Failed to trigger snapshot after backup: ${err.message}`);
+      });
+    }
+
     return backup;
   }
 
@@ -140,6 +148,15 @@ export class BackupService {
     
     if (!isWindows && settings.rclone_host && settings.rclone_user && settings.rclone_pass) {
       try {
+        // Rclone requires passwords in config files to be obscured
+        let obscuredPass = settings.rclone_pass;
+        try {
+          const { execSync } = require("child_process");
+          obscuredPass = execSync(`rclone obscure "${settings.rclone_pass}"`).toString().trim();
+        } catch (err) {
+          logger.warn(`Could not obscure password with rclone: ${err}. Using plain text as fallback (may fail).`);
+        }
+
         // Generate dynamic rclone.conf content
         const rcloneConfContent = `
 [${remoteName}]
@@ -147,7 +164,7 @@ type = webdav
 url = ${settings.rclone_host}
 vendor = nextcloud
 user = ${settings.rclone_user}
-pass = ${settings.rclone_pass}
+pass = ${obscuredPass}
 `.trim();
 
         // Save to temporary file
