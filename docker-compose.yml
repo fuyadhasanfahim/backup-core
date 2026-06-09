@@ -26,7 +26,7 @@ services:
         - NEXT_PUBLIC_API_URL=https://dbapi.webbriks.com/api
     container_name: backendsafe-dashboard
     ports:
-      - "7100:3000"
+      - "7102:3000"
     environment:
       - NODE_ENV=production
       - HOSTNAME=0.0.0.0
